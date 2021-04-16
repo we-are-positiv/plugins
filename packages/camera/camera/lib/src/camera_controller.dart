@@ -1,4 +1,4 @@
-// Copyright 2018 The Chromium Authors. All rights reserved.
+// Copyright 2013 The Flutter Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -32,19 +32,19 @@ Future<List<CameraDescription>> availableCameras() async {
 class CameraValue {
   /// Creates a new camera controller state.
   const CameraValue({
-    this.isInitialized,
+    @required this.isInitialized,
     this.errorDescription,
     this.previewSize,
-    this.isRecordingVideo,
-    this.isTakingPicture,
-    this.isStreamingImages,
-    bool isRecordingPaused,
-    this.flashMode,
-    this.exposureMode,
-    this.focusMode,
-    this.exposurePointSupported,
-    this.focusPointSupported,
-    this.deviceOrientation,
+    @required this.isRecordingVideo,
+    @required this.isTakingPicture,
+    @required this.isStreamingImages,
+    @required bool isRecordingPaused,
+    @required this.flashMode,
+    @required this.exposureMode,
+    @required this.focusMode,
+    @required this.exposurePointSupported,
+    @required this.focusPointSupported,
+    @required this.deviceOrientation,
     this.lockedCaptureOrientation,
     this.recordingOrientation,
   }) : _isRecordingPaused = isRecordingPaused;
@@ -58,7 +58,9 @@ class CameraValue {
           isStreamingImages: false,
           isRecordingPaused: false,
           flashMode: FlashMode.auto,
+          exposureMode: ExposureMode.auto,
           exposurePointSupported: false,
+          focusMode: FocusMode.auto,
           focusPointSupported: false,
           deviceOrientation: DeviceOrientation.portraitUp,
         );
@@ -88,7 +90,7 @@ class CameraValue {
 
   /// The size of the preview in pixels.
   ///
-  /// Is `null` until  [isInitialized] is `true`.
+  /// Is `null` until [isInitialized] is `true`.
   final Size previewSize;
 
   /// Convenience getter for `previewSize.width / previewSize.height`.
@@ -227,7 +229,11 @@ class CameraController extends ValueNotifier<CameraValue> {
   /// When null the imageFormat will fallback to the platforms default.
   final ImageFormatGroup imageFormatGroup;
 
-  int _cameraId;
+  /// The id of a camera that hasn't been initialized.
+  @visibleForTesting
+  static const int kUninitializedCameraId = -1;
+  int _cameraId = kUninitializedCameraId;
+
   bool _isDisposed = false;
   StreamSubscription<dynamic> _imageStreamSubscription;
   FutureOr<bool> _initCalled;
@@ -278,7 +284,7 @@ class CameraController extends ValueNotifier<CameraValue> {
 
       await CameraPlatform.instance.initializeCamera(
         _cameraId,
-        imageFormatGroup: imageFormatGroup,
+        imageFormatGroup: imageFormatGroup ?? ImageFormatGroup.unknown,
       );
 
       value = value.copyWith(
@@ -422,7 +428,7 @@ class CameraController extends ValueNotifier<CameraValue> {
       throw CameraException(e.code, e.message);
     }
 
-    await _imageStreamSubscription.cancel();
+    await _imageStreamSubscription?.cancel();
     _imageStreamSubscription = null;
   }
 
@@ -583,12 +589,16 @@ class CameraController extends ValueNotifier<CameraValue> {
   }
 
   /// Sets the exposure point for automatically determining the exposure value.
+  ///
+  /// Supplying a `null` value will reset the exposure point to it's default
+  /// value.
   Future<void> setExposurePoint(Offset point) async {
     if (point != null &&
         (point.dx < 0 || point.dx > 1 || point.dy < 0 || point.dy > 1)) {
       throw ArgumentError(
           'The values of point should be anywhere between (0,0) and (1,1).');
     }
+
     try {
       await CameraPlatform.instance.setExposurePoint(
         _cameraId,
@@ -715,6 +725,9 @@ class CameraController extends ValueNotifier<CameraValue> {
   }
 
   /// Sets the focus point for automatically determining the focus value.
+  ///
+  /// Supplying a `null` value will reset the focus point to it's default
+  /// value.
   Future<void> setFocusPoint(Offset point) async {
     if (point != null &&
         (point.dx < 0 || point.dx > 1 || point.dy < 0 || point.dy > 1)) {
