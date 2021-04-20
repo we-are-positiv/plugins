@@ -89,7 +89,8 @@ public final class CameraUtils {
 
     CamcorderProfile profile =
         getBestAvailableCamcorderProfileForResolutionPreset(cameraName, preset);
-    return new Size(profile.videoFrameWidth, profile.videoFrameHeight);
+    // return new Size(profile.videoFrameWidth, profile.videoFrameHeight);
+    return new Size(1024, 768);
   }
 
   static Size computeBestCaptureSize(StreamConfigurationMap streamConfigurationMap) {
